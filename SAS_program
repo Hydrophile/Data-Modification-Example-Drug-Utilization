@@ -1,0 +1,269 @@
+
+/*****************************************************************************************************************************
+Arizona Department of Health Services
+Bureau of Epidemiology and Disease Control
+Office of Disease Integration Services
+******************************************************************************************************************************
+Sisense Proof of Concept (POC) #4: 
+Drug Utilization Report by Manufactures/Labelers/Drugs
+******************************************************************************************************************************
+Programmer:			
+David Balkcom, Evaluation and Data Manager, RWPB
+
+Last updated:
+March 15, 2016
+
+
+*****************************************************************************************************************************/
+/* Libraries | Options | Macros */
+LIBNAME rebates "F:\Data Warehouse\Rebate Mailings";
+LIBNAME backup "F:\Data Warehouse\Rebate Mailings\RWPB Rebate Files Backup Folder";
+LIBNAME output "F:\Work Library\SiSense\POC 2";
+OPTIONS SYMBOLGEN;
+%let avella=avella_adap_manufacturer*;
+%let year=2015;
+%let qtr=4;
+%let qyr=4_2015;   
+
+/*****************************************************************************************************************************/
+/* Step 1: Merge NDC code and manufacturer name from the NDC codebook                                           */
+/*****************************************************************************************************************************/
+proc import
+	OUT=ndc
+	DATAFILE= "F:\Data Warehouse\Rebate Mailings\NDC labeler code book.xlsx"
+	DBMS=EXCEL REPLACE;
+	/**/	
+	RANGE="NDCLabelerCode$";
+	GETNAMES=YES;
+	MIXED=NO;
+	SCANTEXT=YES;
+	USEDATE=YES;
+	SCANTIME=YES;
+run;
+** Create [Labeler] field from NDC;
+data ndc; set ndc;
+	ndc2=substr(ndc,5,1);
+	if ndc2='' then labeler='0'||ndc;
+	else labeler=ndc;
+	drop ndc ndc2;
+run;
+
+
+
+/*****************************************************************************************************************************/
+/* Step 2: Import Avella dataset and assign formatting                                                                                       */
+/*****************************************************************************************************************************/
+data avella;
+infile "F:\Data Warehouse\Rebate Mailings\&year. Q&qtr.\&avella..txt" firstobs=1 lrecl=450;
+	input 
+	@1 record_type $2.
+	@3 line_no $11.
+	@14 data_level $2.
+	@16 plan_id_qualifier $1.
+	@17 plan_id_code $17.
+	@34 plan_name $30.
+	@64 pharm_id_q $1.
+	@65 pharm_id_code $17.
+	@82 pharm_zip $9.
+	@91 prod_code_q $1.
+	@92 NDC $17.
+	@92 labeler $5.
+	@109 drug_name $30. 
+	@139 DAW $1.
+	@140 qty 15.3
+	@155 unit_meas $2.
+	@157 dose_form $2.
+	@159 dx_code $6.
+	@165 r_days_supply 4.
+	@169 rx_type $2.
+	@171 cnt_rx $8.
+	@179 rx_number $7.
+	@186 date_filled $10.
+	@194 reim_date $8.
+	@202 ther_class_q $1.
+	@203 ther_class_code $17.
+	@220 ther_class_desc $30.
+	@250 plan_reim_q $1.
+	@251 plan_reim_amt 12.
+	@263 adap_liability 12.2
+	@275 fill_code $2.
+	@277 rec_pur_indicator $1.
+	@278 rebate_unit_amt 12.
+	@290 rebate_req_amt 12.
+	@302 form_code $17.
+	@319 doc_id_q $1.
+	@320 doc_id $10.
+	@330 enc_pat_code $17.
+	@347 claim_no $20.
+	@367 filler $34.
+	@401 mfr_name $50.;
+run;
+proc sort data=avella; by labeler; run;
+proc sort data=ndc; by labeler; run;
+** Remove non-applicable obs;
+data avella2;
+	MERGE avella (in=i) ndc (in=j);
+	by labeler;
+			if adap_liability=1.2 then delete;
+				else if adap_liability=3.6 then delete;
+				else if adap_liability=2.55 then delete;
+				else if adap_liability=6.35 then delete;
+			if i then output;
+run;
+** Display results;
+/*proc contents data=avella2 VARNUM;*/
+/*run;*/
+/*proc print data =avella2 (obs=25);*/
+/*run;*/
+
+** Remove PHI for Sisense;
+data avellaclean; set avella2;
+	drop 
+		plan_id_qualifier
+		plan_id_code 
+		plan_name
+		pharm_id_q 
+		DAW 
+		rx_number
+		unit_meas
+		dose_form
+		dx_code
+		rx_type
+		cnt_rx
+		reim_date
+		ther_class_q
+		ther_class_code
+		ther_class_desc
+		plan_reim_q
+		plan_reim_amt
+		rebate_unit_amt
+		rebate_req_amt
+		doc_id
+		enc_pat_code
+		claim_no
+		filler
+		form_code
+; 
+	new_fill_date = substr(date_filled,5);
+	new_year=2014;
+	CLEAN_date_filled = cat(new_year,new_fill_date);
+
+run;
+
+data avellaclean; set avellaclean;
+	drop
+		date_filled
+		new_fill_date
+		new_year;
+run;
+	
+** Output dataset;
+proc export data=avellaclean
+	OUTFILE="F:\Work Library\SiSense\POC 2\Avella_Q&qyr..xls"
+	DBMS=excel REPLACE;
+	sheet = "&qyr";
+run;
+
+
+
+
+/*****************************************************************************************************************************/
+/* Step 3: Import Ramsell dataset and assign formatting                                                                                   */
+/*****************************************************************************************************************************/
+** 	A) Remove 340-B pharmacies from rebate for Ramsell & Avella, use NCPDP code;
+** 	B) Recode Ramsell to match Avella format and variable names;
+**     C) Remove charges for Medicare | Medicaid dual-eligible clients;
+**          The 2014 charge for those are $1.2, $3.6, $2.55 or $6.35;
+**		D) Remove 340-B pharmacies at MIHS, University of Arizona, El Rio and North Country;
+**		     NCPDP code for El Rio West Pharmacy is 0352916;
+**		E) Remove the charges in Avella pharmacies*/
+**		     NCPDP codes for Avella are 0327026, 0324157, 0354643, 0326721, 0326466, 0354934, 0317114, 0326656;
+%let ramsell=U2DrugUsageReport;
+%let year=2014;
+%let qtr=4;
+%let qyr=4_2014; 
+proc import OUT=ramsell 
+     DATAFILE="F:\Data Warehouse\Rebate Mailings\&year. Q&qtr.\Q&qtr.&year.&ramsell..xls" 
+	 DBMS=EXCEL REPLACE;
+ 	 RANGE="Sheet1$"; 
+     GETNAMES=YES;
+     MIXED=NO;
+     SCANTEXT=YES;
+     USEDATE=YES;
+     SCANTIME=YES;
+run;
+** First transformation: Remove 340-B observations;
+data ramsell2; set ramsell;
+	LENGTH drug_name $15. claim_no $12.; 
+	labeler=substr(NDC, 1, 5);
+	NDC=compress(NDC,'-');
+	drug_name=drug_brand_name;
+	adap_liability=sponsor_total;
+	qty=units;
+	r_days_supply=day_supply;
+	claim_no=claim_number;
+    date_filled=fill_date;
+			if adap_liability=1.2 then delete;
+				else if adap_liability=3.6 then delete;
+				else if adap_liability=2.55 then delete;
+				else if adap_liability=6.35 then delete;
+			if	NCPDP='0352916' then delete;
+				else if NCPDP='0327026' then delete;
+				else if NCPDP='0324157' then delete;
+				else if NCPDP='0354643' then delete;
+				else if NCPDP='0326721' then delete;
+				else if NCPDP='0326466' then delete;
+				else if NCPDP='0354934' then delete;
+				else if NCPDP='0317114' then delete;
+				else if NCPDP='0326656' then delete;
+run;
+proc sort data=ramsell2; by labeler; run;
+proc sort data=ndc nodupkey; by labeler; run;
+** Second transformation: Merge with NDC drug code & format changes;
+data ramsell3;
+	MERGE ndc ramsell2 (in=i) ;
+	by labeler;
+	if i then output;
+run;
+** Display results;
+/*proc contents data=ramsell3 VARNUM;*/
+/*run;*/
+
+** Remove PHI for demonstration;
+data ramsell4; set ramsell3;
+
+	CLEAN_fill_date = intnx ('day', fill_date, -364) ;
+	format CLEAN_fill_date date9.;
+
+	drop
+		id
+		trans_date
+		patient_ID
+		claim_number
+		pharmacy_total
+		jurisdiction
+		income
+		gcn
+		hicl
+		pmdc_id
+		federal_id
+		last_name
+		first_name
+		mi
+		dob
+		gender
+		doctor_id
+		doctor_first_name
+		claim_no
+		date_filled
+		fill_date
+;
+	
+run;
+
+** Output dataset;
+proc export data=ramsell4	
+	OUTFILE="F:\Work Library\SiSense\POC 2\Ramsell_Q&qyr..xls"
+	DBMS=excel REPLACE;
+	sheet = "&qyr";
+run;
