@@ -1,0 +1,667 @@
+12   LIBNAME desktop "C:\Users\balkcod\Desktop";
+NOTE: Libref DESKTOP was successfully assigned as follows:
+      Engine:        V9
+      Physical Name: C:\Users\balkcod\Desktop
+13   LIBNAME aidsfmts "C:\Aids";
+NOTE: Libref AIDSFMTS was successfully assigned as follows:
+      Engine:        V9
+      Physical Name: C:\Aids
+14   LIBNAME rebates "F:\Data Warehouse\Rebate Mailings\2015 Q4";
+NOTE: Libref REBATES was successfully assigned as follows:
+      Engine:        V9
+      Physical Name: F:\Data Warehouse\Rebate Mailings\2015 Q4
+15   LIBNAME datasets "G:\Groups\HIV3\Rebates\Data";
+NOTE: Libref DATASETS was successfully assigned as follows:
+      Engine:        V9
+      Physical Name: G:\Groups\HIV3\Rebates\Data
+16   LIBNAME backup "F:\Data Warehouse\Rebate Mailings\RWPB Rebate Files Backup Folder";
+NOTE: Libref BACKUP was successfully assigned as follows:
+      Engine:        V9
+      Physical Name: F:\Data Warehouse\Rebate Mailings\RWPB Rebate Files Backup Folder
+17   OPTIONS SYMBOLGEN;
+18   %let avella=avella_adap_manufacturer_20160121_154839;
+19   %let ramsell=Q42015U2DrugUsageReport;
+20   %let year=2015;
+21   %let qtr=4;
+22   %let qyr=4_2015;
+23   proc import
+24       OUT=ndc
+25       DATAFILE= "F:\Data Warehouse\Rebate Mailings\NDC labeler code book.xlsx"
+26       DBMS=EXCEL REPLACE;
+27       /**/
+28       RANGE="NDCLabelerCode$";
+29       GETNAMES=YES;
+30       MIXED=NO;
+31       SCANTEXT=YES;
+32       USEDATE=YES;
+33       SCANTIME=YES;
+34   run;
+
+SYMBOLGEN:  Macro variable _IMEXSERROR_ resolves to SERROR
+NOTE: WORK.NDC data set was successfully created.
+NOTE: The data set WORK.NDC has 6790 observations and 2 variables.
+NOTE: PROCEDURE IMPORT used (Total process time):
+      real time           4.22 seconds
+      cpu time            0.73 seconds
+
+
+35   data ndc; set ndc;
+36       ndc2=substr(ndc,5,1);
+37       if ndc2='' then labeler='0'||ndc;
+38       else labeler=ndc;
+39       drop ndc ndc2;
+40   run;
+
+NOTE: There were 6790 observations read from the data set WORK.NDC.
+NOTE: The data set WORK.NDC has 6790 observations and 2 variables.
+NOTE: DATA statement used (Total process time):
+      real time           0.26 seconds
+      cpu time            0.01 seconds
+
+
+41   data avella;
+SYMBOLGEN:  Macro variable YEAR resolves to 2015
+SYMBOLGEN:  Macro variable QTR resolves to 4
+SYMBOLGEN:  Macro variable AVELLA resolves to avella_adap_manufacturer_20160121_154839
+42   infile "F:\Data Warehouse\Rebate Mailings\&year. Q&qtr.\&avella..txt" firstobs=1 lrecl=450;
+43       input
+44       @1 record_type $2.
+45       @3 line_no $11.
+46       @14 data_level $2.
+47       @16 plan_id_qualifier $1.
+48       @17 plan_id_code $17.
+49       @34 plan_name $30.
+50       @64 pharm_id_q $1.
+51       @65 pharm_id_code $17.
+52       @82 pharm_zip $9.
+53       @91 prod_code_q $1.
+54       @92 NDC $17.
+55       @92 labeler $5.
+56       @109 drug_name $30.
+57       @139 DAW $1.
+58       @140 qty 15.3
+59       @155 unit_meas $2.
+60       @157 dose_form $2.
+61       @159 dx_code $6.
+62       @165 r_days_supply 4.
+63       @169 rx_type $2.
+64       @171 cnt_rx $8.
+65       @179 rx_number $7.
+66       @186 date_filled $10.
+67       @194 reim_date $8.
+68       @202 ther_class_q $1.
+69       @203 ther_class_code $17.
+70       @220 ther_class_desc $30.
+71       @250 plan_reim_q $1.
+72       @251 plan_reim_amt 12.
+73       @263 adap_liability 12.2
+74       @275 fill_code $2.
+75       @277 rec_pur_indicator $1.
+76       @278 rebate_unit_amt 12.
+77       @290 rebate_req_amt 12.
+78       @302 form_code $17.
+79       @319 doc_id_q $1.
+80       @320 doc_id $10.
+81       @330 enc_pat_code $17.
+82       @347 claim_no $20.
+83       @367 filler $34.
+84       @401 mfr_name $50.;
+85   run;
+
+NOTE: The infile "F:\Data Warehouse\Rebate Mailings\2015
+      Q4\avella_adap_manufacturer_20160121_154839.txt" is:
+
+      Filename=F:\Data Warehouse\Rebate Mailings\2015
+      Q4\avella_adap_manufacturer_20160121_154839.txt,
+      RECFM=V,LRECL=450,File Size (bytes)=2702056,
+      Last Modified=21Jan2016:16:10:20,
+      Create Time=21Jan2016:16:10:41
+
+NOTE: 5978 records were read from the infile "F:\Data Warehouse\Rebate Mailings\2015
+      Q4\avella_adap_manufacturer_20160121_154839.txt".
+      The minimum record length was 450.
+      The maximum record length was 450.
+NOTE: The data set WORK.AVELLA has 5978 observations and 41 variables.
+NOTE: DATA statement used (Total process time):
+      real time           5.39 seconds
+      cpu time            0.06 seconds
+
+
+86   proc sort data=avella; by labeler; run;
+
+NOTE: There were 5978 observations read from the data set WORK.AVELLA.
+NOTE: The data set WORK.AVELLA has 5978 observations and 41 variables.
+NOTE: PROCEDURE SORT used (Total process time):
+      real time           0.07 seconds
+      cpu time            0.00 seconds
+
+
+87   proc sort data=ndc; by labeler; run;
+
+NOTE: There were 6790 observations read from the data set WORK.NDC.
+NOTE: The data set WORK.NDC has 6790 observations and 2 variables.
+NOTE: PROCEDURE SORT used (Total process time):
+      real time           0.01 seconds
+      cpu time            0.01 seconds
+
+
+
+88   data avella2;
+89       MERGE avella (in=i) ndc (in=j);
+90       by labeler;
+91               if adap_liability=1.2 then delete;
+92                   else if adap_liability=3.6 then delete;
+93                   else if adap_liability=2.55 then delete;
+94                   else if adap_liability=6.35 then delete;
+95               if i then output;
+96   run;
+
+WARNING: Multiple lengths were specified for the BY variable labeler by input data sets. This may
+         cause unexpected results.
+WARNING: Multiple lengths were specified for the variable mfr_name by input data set(s). This may
+         cause truncation of data.
+NOTE: MERGE statement has more than one data set with repeats of BY values.
+NOTE: There were 5978 observations read from the data set WORK.AVELLA.
+NOTE: There were 6790 observations read from the data set WORK.NDC.
+NOTE: The data set WORK.AVELLA2 has 5939 observations and 41 variables.
+NOTE: DATA statement used (Total process time):
+      real time           0.53 seconds
+      cpu time            0.04 seconds
+
+
+97   proc contents data=avella2;
+NOTE: Writing HTML Body file: sashtml.htm
+98   run;
+
+NOTE: PROCEDURE CONTENTS used (Total process time):
+      real time           3.01 seconds
+      cpu time            0.60 seconds
+
+
+99   proc print data =avella2 (obs=25);
+100      var line_no /*rx_number claim_no*/ labeler ndc drug_name qty r_days_supply adap_liability
+100! ;
+101  run;
+
+NOTE: There were 25 observations read from the data set WORK.AVELLA2.
+NOTE: PROCEDURE PRINT used (Total process time):
+      real time           0.11 seconds
+      cpu time            0.03 seconds
+
+
+102  data avella2;
+103      MERGE avella (in=i) ndc (in=j);
+104      by labeler;
+105                           if adap_liability=1.2 then delete;
+106                  else if adap_liability=3.6 then delete;
+107                  else if adap_liability=2.55 then delete;
+108                  else if adap_liability=6.35 then delete;
+109                  put;
+110              if i then output;
+111  run;
+
+WARNING: Multiple lengths were specified for the BY variable labeler by input data sets. This may
+         cause unexpected results.
+WARNING: Multiple lengths were specified for the variable mfr_name by input data set(s). This may
+         cause truncation of data.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+NOTE: MERGE statement has more than one data set with repeats of BY values.
+NOTE: There were 5978 observations read from the data set WORK.AVELLA.
+NOTE: There were 6790 observations read from the data set WORK.NDC.
+NOTE: The data set WORK.AVELLA2 has 5939 observations and 41 variables.
+NOTE: DATA statement used (Total process time):
+      real time           0.01 seconds
+      cpu time            0.01 seconds
+
+
+112  proc contents data=avella2;
+113  run;
+
+NOTE: PROCEDURE CONTENTS used (Total process time):
+      real time           0.03 seconds
+      cpu time            0.01 seconds
+
+
+114  proc print data =avella2 (obs=25);
+115      var line_no /*rx_number claim_no*/ labeler ndc drug_name qty r_days_supply adap_liability
+115! ;
+116  run;
+
+NOTE: There were 25 observations read from the data set WORK.AVELLA2.
+NOTE: PROCEDURE PRINT used (Total process time):
+      real time           0.01 seconds
+      cpu time            0.01 seconds
+
+
+117  proc import OUT=ramsell
+118       DATAFILE="F:\Data Warehouse\Rebate Mailings\&year. Q&qtr.\&ramsell..xls"
+SYMBOLGEN:  Macro variable YEAR resolves to 2015
+SYMBOLGEN:  Macro variable QTR resolves to 4
+SYMBOLGEN:  Macro variable RAMSELL resolves to Q42015U2DrugUsageReport
+119       DBMS=EXCEL REPLACE;
+120       RANGE="Sheet1$";
+121       GETNAMES=YES;
+122       MIXED=NO;
+123       SCANTEXT=YES;
+124       USEDATE=YES;
+125       SCANTIME=YES;
+126  run;
+
+SYMBOLGEN:  Macro variable _IMEXSERROR_ resolves to SERROR
+NOTE: WORK.RAMSELL data set was successfully created.
+NOTE: The data set WORK.RAMSELL has 10772 observations and 47 variables.
+NOTE: PROCEDURE IMPORT used (Total process time):
+      real time           12.90 seconds
+      cpu time            2.57 seconds
+
+
+127  ** First transformation: Remove 340-B observations;
+128  data ramsell2; set ramsell;
+129      LENGTH drug_name $15. claim_no $12.;
+130      labeler=substr(NDC, 1, 5);
+131      NDC=compress(NDC,'-');
+132      drug_name=drug_brand_name;
+133      adap_liability=sponsor_total;
+134      qty=units;
+135      r_days_supply=day_supply;
+136      claim_no=claim_number;
+137      date_filled=fill_date;
+138              if adap_liability=1.2 then delete;
+139                  else if adap_liability=3.6 then delete;
+140                  else if adap_liability=2.55 then delete;
+141                  else if adap_liability=6.35 then delete;
+142              if  NCPDP='0352916' then delete;
+143                  else if NCPDP='0327026' then delete;
+144                  else if NCPDP='0324157' then delete;
+145                  else if NCPDP='0354643' then delete;
+146                  else if NCPDP='0326721' then delete;
+147                  else if NCPDP='0326466' then delete;
+148                  else if NCPDP='0354934' then delete;
+149                  else if NCPDP='0317114' then delete;
+150                  else if NCPDP='0326656' then delete;
+151  run;
+
+NOTE: There were 10772 observations read from the data set WORK.RAMSELL.
+NOTE: The data set WORK.RAMSELL2 has 4770 observations and 54 variables.
+NOTE: DATA statement used (Total process time):
+      real time           0.17 seconds
+      cpu time            0.01 seconds
+
+
+152  proc sort data=ramsell2; by labeler; run;
+
+NOTE: There were 4770 observations read from the data set WORK.RAMSELL2.
+NOTE: The data set WORK.RAMSELL2 has 4770 observations and 54 variables.
+NOTE: PROCEDURE SORT used (Total process time):
+      real time           0.01 seconds
+      cpu time            0.00 seconds
+
+
+153  proc sort data=ndc nodupkey; by labeler; run;
+
+NOTE: There were 6790 observations read from the data set WORK.NDC.
+NOTE: 8 observations with duplicate key values were deleted.
+NOTE: The data set WORK.NDC has 6782 observations and 2 variables.
+NOTE: PROCEDURE SORT used (Total process time):
+      real time           0.10 seconds
+      cpu time            0.01 seconds
+
+
+
+154  data ramsell3;
+155      MERGE ndc ramsell2 (in=i) ;
+156      by labeler;
+157      if i then output;
+158  run;
+
+WARNING: Multiple lengths were specified for the BY variable labeler by input data sets. This may
+         cause unexpected results.
+NOTE: There were 6782 observations read from the data set WORK.NDC.
+NOTE: There were 4770 observations read from the data set WORK.RAMSELL2.
+NOTE: The data set WORK.RAMSELL3 has 4770 observations and 55 variables.
+NOTE: DATA statement used (Total process time):
+      real time           0.04 seconds
+      cpu time            0.04 seconds
+
+
+159  data avella3; set avella2;
+160      date_filled2=input(date_filled, yymmdd8.);
+161      FORMAT date_filled2 mmddyy8.;
+162      DROP date_filled;
+163      RENAME date_filled2=date_filled;
+164  run;
+
+NOTE: There were 5939 observations read from the data set WORK.AVELLA2.
+NOTE: The data set WORK.AVELLA3 has 5939 observations and 41 variables.
+NOTE: DATA statement used (Total process time):
+      real time           0.12 seconds
+      cpu time            0.03 seconds
+
+
+165  data rebate1; set ramsell3 avella3;
+166      if index (drug_name, 'FREESTYLE') GE 1 AND MFR_NAME='' THEN MFR_NAME='ABBOTT
+166! LABORATORIES';
+167          else if index (drug_name,  'FREESTYLE') ge 1 and mfr_name='' then mfr_name='ABBOTT
+167! LABORATORIES';
+168          else if index (drug_name,  'ACCU-CHECK') ge 1 and mfr_name='' then mfr_name='ROCHE';
+169          else if index (drug_name,  'ACCU-CHEK') ge 1 and mfr_name='' then mfr_name='ROCHE';
+170          else if index (drug_name,  'SOFTCLIX') ge 1 and mfr_name='' then mfr_name='ROCHE';
+171          else if index (drug_name,  'ONE TOUCH') ge 1 and mfr_name='' then mfr_name='LIFESCAN'
+171! ;
+172          else if index (drug_name,  'NEEDLE') ge 1 and mfr_name='' then mfr_name='BD';
+173          else if index (drug_name,  'SYRINGE') ge 1 and mfr_name='' then mfr_name='BD';
+174          else if index (drug_name,  'BD') ge 1 and mfr_name='' then mfr_name='BD';
+175          else if index (drug_name,  'LANOXI') ge 1 and mfr_name='' then mfr_name='COVIS
+175! PHARMACEUTICALS';
+176          else if index (drug_name,  'FREESTYLE') ge 1 and mfr_name='' then mfr_name='ABBOTT
+176! LABORATORIES';
+177          else if index (drug_name,  'ACCU-CHECK') ge 1 and mfr_name='' then mfr_name='ROCHE';
+178          else if index (drug_name,  'ACCU-CHEK') ge 1 and mfr_name='' then mfr_name='ROCHE';
+179          else if index (drug_name,  'SOFTCLIX') ge 1 and mfr_name='' then mfr_name='ROCHE';
+180          else if index (drug_name,  'ONE TOUCH') ge 1 and mfr_name='' then mfr_name='LIFESCAN'
+180! ;
+181          else if index (drug_name,  'PYRIDOXINE') ge 1 and mfr_name='' then mfr_name='MAJOR';
+182          else if index (drug_name,  'VITAMIN') ge 1 and mfr_name='' then mfr_name='NATURES
+182! CHOICE';
+183  run;
+
+WARNING: Multiple lengths were specified for the variable NDC by input data set(s). This may
+         cause truncation of data.
+WARNING: Multiple lengths were specified for the variable drug_name by input data set(s). This
+         may cause truncation of data.
+WARNING: Multiple lengths were specified for the variable claim_no by input data set(s). This may
+         cause truncation of data.
+NOTE: There were 4770 observations read from the data set WORK.RAMSELL3.
+NOTE: There were 5939 observations read from the data set WORK.AVELLA3.
+NOTE: The data set WORK.REBATE1 has 10709 observations and 87 variables.
+NOTE: DATA statement used (Total process time):
+      real time           0.04 seconds
+      cpu time            0.04 seconds
+
+
+184  data rebate2; set rebate1;
+185      keep pharm_id_q pharm_id_code pharm_zip prod_code_q  NDC labeler drug_name qty
+186      dose_form r_days_supply rx_number date_filled adap_liability mfr_name;
+187  run;
+
+NOTE: There were 10709 observations read from the data set WORK.REBATE1.
+NOTE: The data set WORK.REBATE2 has 10709 observations and 14 variables.
+NOTE: DATA statement used (Total process time):
+      real time           0.01 seconds
+      cpu time            0.01 seconds
+
+
+188  proc sql;
+189  CREATE VIEW m1 as
+190  SELECT DISTINCT
+191      labeler,
+192      count(labeler) as mfr_cnt,
+193      mfr_name
+194          FROM rebate2
+195          GROUP BY labeler
+196          ORDER BY mfr_cnt DESC, mfr_name;
+NOTE: SQL view WORK.M1 has been defined.
+197  quit;
+NOTE: PROCEDURE SQL used (Total process time):
+      real time           0.03 seconds
+      cpu time            0.00 seconds
+
+
+198  proc sort data=m1 out=m1_sort nodupkey dupout=m1_dup; by labeler; run;
+NOTE: The query requires remerging summary statistics back with the original data.
+
+NOTE: There were 319 observations read from the data set WORK.M1.
+NOTE: 133 observations with duplicate key values were deleted.
+NOTE: The data set WORK.M1_SORT has 186 observations and 3 variables.
+NOTE: The data set WORK.M1_DUP has 133 observations and 3 variables.
+NOTE: PROCEDURE SORT used (Total process time):
+      real time           0.54 seconds
+      cpu time            0.04 seconds
+
+
+NOTE: The query requires remerging summary statistics back with the original data.
+199  proc sql;
+200  CREATE TABLE m2 as
+201  SELECT DISTINCT
+202      r1.ndc,
+203      r1.drug_name,
+204      sum(r1.qty) as qty_disp,
+205      count(r1.ndc) as n_rx,
+206      sum(r1.adap_liability) as adap_cst,
+207      r1.labeler,
+208      r1.mfr_name,
+209      m1_sort.mfr_cnt
+210          FROM rebate2 as r1
+211          JOIN m1_sort on r1.labeler=m1_sort.labeler
+212          GROUP BY  r1.ndc, r1.labeler
+213          ORDER BY adap_cst desc;
+NOTE: The query requires remerging summary statistics back with the original data.
+NOTE: Table WORK.M2 created, with 1715 rows and 8 columns.
+
+214  quit;
+NOTE: PROCEDURE SQL used (Total process time):
+      real time           0.30 seconds
+      cpu time            0.07 seconds
+
+
+NOTE: The query requires remerging summary statistics back with the original data.
+NOTE: The query requires remerging summary statistics back with the original data.
+215  proc sort data=m1 out=m1_sort nodupkey dupout=m1_dup; by labeler; run;
+NOTE: The query requires remerging summary statistics back with the original data.
+
+NOTE: There were 319 observations read from the data set WORK.M1.
+NOTE: 133 observations with duplicate key values were deleted.
+NOTE: The data set WORK.M1_SORT has 186 observations and 3 variables.
+NOTE: The data set WORK.M1_DUP has 133 observations and 3 variables.
+NOTE: PROCEDURE SORT used (Total process time):
+      real time           14.92 seconds
+      cpu time            0.12 seconds
+
+
+216  proc sql;
+217  CREATE TABLE m2 as
+218  SELECT DISTINCT
+219      r1.ndc,
+220      r1.drug_name,
+221      sum(r1.qty) as qty_disp,
+222      count(r1.ndc) as n_rx,
+223      sum(r1.adap_liability) as adap_cst,
+224      r1.labeler,
+225      r1.mfr_name,
+226      m1_sort.mfr_cnt
+227          FROM rebate2 as r1
+228          JOIN m1_sort on r1.labeler=m1_sort.labeler
+229          GROUP BY  r1.ndc, r1.labeler
+230          ORDER BY adap_cst desc;
+NOTE: The query requires remerging summary statistics back with the original data.
+NOTE: Table WORK.M2 created, with 1715 rows and 8 columns.
+
+231  quit;
+NOTE: PROCEDURE SQL used (Total process time):
+      real time           0.58 seconds
+      cpu time            0.15 seconds
+
+
+232  proc sort data=m2 out=rebates.sum&qyr nodupkey; by ndc; run;
+SYMBOLGEN:  Macro variable QYR resolves to 4_2015
+
+NOTE: There were 1715 observations read from the data set WORK.M2.
+NOTE: 297 observations with duplicate key values were deleted.
+NOTE: The data set REBATES.SUM4_2015 has 1418 observations and 8 variables.
+NOTE: PROCEDURE SORT used (Total process time):
+      real time           0.24 seconds
+      cpu time            0.04 seconds
+
+
+233  proc sort data=m2 out=m3 nodupkey; by ndc; run;
+
+NOTE: There were 1715 observations read from the data set WORK.M2.
+NOTE: 297 observations with duplicate key values were deleted.
+NOTE: The data set WORK.M3 has 1418 observations and 8 variables.
+NOTE: PROCEDURE SORT used (Total process time):
+      real time           0.03 seconds
+      cpu time            0.01 seconds
+
+
+
+234  proc sql;
+235  CREATE VIEW m4 as
+236  SELECT DISTINCT
+237      labeler,
+238      mfr_name,
+239      sum(qty_disp) as tot_units,
+240      sum(n_rx) as tot_rx,
+241      sum(adap_cst) as tot_paid
+242          FROM m3
+243          GROUP BY labeler;
+NOTE: SQL view WORK.M4 has been defined.
+244  quit;
+NOTE: PROCEDURE SQL used (Total process time):
+      real time           0.12 seconds
+      cpu time            0.01 seconds
+
+
+245  %macro toxls(dst,sht);
+246  proc export
+247      data=&dst
+248      outfile="G:\Groups\Hiv3\Rebates\output\sum&qyr..xls"
+249      dbms=excel replace;
+250      sheet=&sht;
+251  run;
+252  %mend;
+253  %toxls (work.m4,'MRF_Totals');
+SYMBOLGEN:  Macro variable DST resolves to work.m4
+SYMBOLGEN:  Macro variable QYR resolves to 4_2015
+SYMBOLGEN:  Macro variable SHT resolves to 'MRF_Totals'
+
+NOTE: File "G:\Groups\Hiv3\Rebates\output\sum4_2015.xls" will be created if the export process
+      succeeds.
+NOTE: The query requires remerging summary statistics back with the original data.
+NOTE: "MRF_Totals" range/sheet was successfully created.
+NOTE: PROCEDURE EXPORT used (Total process time):
+      real time           8.97 seconds
+      cpu time            0.45 seconds
+
+
+254  %toxls (work.m3,'SUM&QYR');
+SYMBOLGEN:  Macro variable DST resolves to work.m3
+SYMBOLGEN:  Macro variable QYR resolves to 4_2015
+SYMBOLGEN:  Macro variable SHT resolves to 'SUM&QYR'
+
+NOTE: "SUM_QYR" range/sheet was successfully created.
+NOTE: PROCEDURE EXPORT used (Total process time):
+      real time           1.29 seconds
+      cpu time            0.37 seconds
+
+
+255  quit;
+
+256  proc sort data=m2 out=firms (keep=labeler mfr_name) nodupkey; by labeler mfr_name; run;
+
+NOTE: There were 1715 observations read from the data set WORK.M2.
+NOTE: 1396 observations with duplicate key values were deleted.
+NOTE: The data set WORK.FIRMS has 319 observations and 2 variables.
+NOTE: PROCEDURE SORT used (Total process time):
+      real time           0.07 seconds
+      cpu time            0.03 seconds
+
+
+257  proc export
+258      DATA=firms
+259      OUTFILE="G:\Groups\Hiv3\Rebates\output\FirmListQ&qyr..xls"
+SYMBOLGEN:  Macro variable QYR resolves to 4_2015
+260      DBMS=excel REPLACE;
+261  run;
+
+NOTE: File "G:\Groups\Hiv3\Rebates\output\FirmListQ4_2015.xls" will be created if the export
+      process succeeds.
+NOTE: "FIRMS" range/sheet was successfully created.
+NOTE: PROCEDURE EXPORT used (Total process time):
+      real time           1.38 seconds
+      cpu time            0.25 seconds
+
+
+262  proc sql;
+263  select n(distinct labeler) into: n_firms from work.m2;
+264  %let n_firms=&n_firms;
+SYMBOLGEN:  Macro variable N_FIRMS resolves to      186
+265  select labeler, mfr_name
+266      into :l1-:l&n_firms,:f1-:f&n_firms
+SYMBOLGEN:  Macro variable N_FIRMS resolves to 186
+SYMBOLGEN:  Macro variable N_FIRMS resolves to 186
+267      from work.m2;
+268  quit;
+NOTE: PROCEDURE SQL used (Total process time):
+      real time           1.99 seconds
+      cpu time            0.18 seconds
+
+
+SYMBOLGEN:  Macro variable QYR resolves to 4_2015
+269  data rebates.det&qyr (drop=pharm_id_q pharm_id_code pharm_zip prod_code_q); set rebate2;
+270  run;
+
+NOTE: There were 10709 observations read from the data set WORK.REBATE2.
+NOTE: The data set REBATES.DET4_2015 has 10709 observations and 10 variables.
+NOTE: DATA statement used (Total process time):
+      real time           0.45 seconds
+      cpu time            0.04 seconds
+
+
+271  proc sort data=rebates.det&qyr; by labeler; run;
+SYMBOLGEN:  Macro variable QYR resolves to 4_2015
+
+NOTE: There were 10709 observations read from the data set REBATES.DET4_2015.
+NOTE: The data set REBATES.DET4_2015 has 10709 observations and 10 variables.
+NOTE: PROCEDURE SORT used (Total process time):
+      real time           0.54 seconds
+      cpu time            0.14 seconds
+
+
+272  ods markup TAGSET= excelxp file="g:\groups\hiv3\rebates\output\det&qyr..xls";
+SYMBOLGEN:  Macro variable QYR resolves to 4_2015
+NOTE: Writing MARKUP Body file: g:\groups\hiv3\rebates\output\det4_2015.xls
+NOTE: This is the Excel XP tagset (Compatible with SAS 9.1.3 and above, v1.130, 05/01/2011). Add
+options(doc='help') to the ods statement for more information.
+273  proc print data=rebates.det&qyr noobs; by labeler; run;
+SYMBOLGEN:  Macro variable QYR resolves to 4_2015
+
+NOTE: There were 10709 observations read from the data set REBATES.DET4_2015.
+NOTE: PROCEDURE PRINT used (Total process time):
+      real time           15.17 seconds
+      cpu time            13.65 seconds
+
+
+274  ods markup close;
+275  **Export dataset in MS Excel format -- use manufacturer name as file name with month and year
+275!  end of quarter;
+276  proc export data=rebates.det&qyr
+SYMBOLGEN:  Macro variable QYR resolves to 4_2015
+277      outfile="g:\groups\hiv3\rebates\output\rebateQ&qtr&year..xls"
+SYMBOLGEN:  Macro variable QTR resolves to 4
+SYMBOLGEN:  Macro variable YEAR resolves to 2015
+278      dbms=excel replace;
+279  run;
+
+NOTE: File "g:\groups\hiv3\rebates\output\rebateQ42015.xls" will be created if the export process
+      succeeds.
+NOTE: "DET4_2015" range/sheet was successfully created.
+NOTE: PROCEDURE EXPORT used (Total process time):
+      real time           1.57 seconds
+      cpu time            0.48 seconds
+
+
